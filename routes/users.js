@@ -11,14 +11,35 @@ const jwt = require('jsonwebtoken');
 const User = () => db().collection('users');
 
 
-/* GET users listing. */
-router.get('/', function (req, res, next) {
-    res.send('respond with a resource');
-});
-router.get('/message', (req, res) => {
+
+router.get('/find',  async (req, res) => {
+    if(Object.keys(req.query).length === 0){
+        return res.json({
+            success: false,
+            message: "must provide a query"
+        })
+    }
+    console.log(req.query);
+
+    //
+    const foundUser = await User().findOne({email: req.query.email});
+    console.log(foundUser);
+    if (foundUser === null) {
+        return res.json({
+            success: false,
+            message: "user does not exist"
+        })
+    }
+    res.json({
+        success: true,
+        result: foundUser
+    })
+})
+router.get('/verify', (req, res) => {
     const token = req.header(process.env.TOKEN_HEADER_KEY);
-    console.log(token);
+
     const verified = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
     if (verified === null) {
         res.json({
             success: false,
@@ -30,19 +51,6 @@ router.get('/message', (req, res) => {
         success: true,
         message: "Token verified"
     })
-
-    // if (verified && verified.userData.scope === 'user') {
-    //     res.json({
-    //         success: true,
-    //         message: "I am a user"
-    //     });
-    // } else if (verified && verified.userData.scope === 'admin') {
-    //     res.json({
-    //         success: true,
-    //         message: "I am an admin"
-    //     })
-    // }
-
 })
 /* POST create user*/
 router.post('/register', async (req, res) => {
@@ -53,9 +61,7 @@ router.post('/register', async (req, res) => {
         password: req.body.password,
         verify: req.body.verify
     }
-    // validate that user object is correct
     console.log("user object", userObj);
-    // console.log("req.body", req.body);
     const validated = validateUser(userObj);
     //
     try {
@@ -156,5 +162,22 @@ router.post('/login', async (req, res) => {
     }
 
 })
-
+/* GET users listing. */
+router.get('/:id', async (req, res, next) => {
+    console.log("id router is running")
+    const foundUser = await User().findOne({_id: req.params.id});
+    if (foundUser === null) {
+        return res.json({
+            success: false,
+            message: "user does not exist"
+        })
+    }
+    res.json({
+        success: true,
+        result: {
+            _id: foundUser._id,
+            email: foundUser.email,
+        }
+    })
+});
 module.exports = router;
