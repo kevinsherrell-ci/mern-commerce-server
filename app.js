@@ -9,6 +9,9 @@ const logger = require('morgan');
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
+const profileRouter = require('./routes/profiles');
+const orderRouter = require('./routes/orders');
+
 const {mongoConnect} = require("./Mongo");
 mongoConnect();
 
@@ -26,7 +29,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
+app.use('/profiles', profileRouter);
+app.use('/orders', orderRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
     next(createError(404));
