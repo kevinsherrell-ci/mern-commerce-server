@@ -7,6 +7,27 @@ const jwt = require('jsonwebtoken');
 
 const Profile = () => db().collection('profiles');
 
+router.get('/:id', async (req, res)=>{
+    try{
+        const findProfile = await Profile().findOne({user_id: req.params.id});
+        if(findProfile === null){
+            return res.json({
+                success: false,
+                message: "this profile does not exist"
+            })
+        }
+        res.json({
+            success: true,
+            result: findProfile
+        })
+    }catch(errors){
+        res.json({
+            success:false,
+            errors: errors
+        })
+    }
+})
+
 router.post('/create', async (req, res) => {
     const profile = {
         _id: uuid(),
