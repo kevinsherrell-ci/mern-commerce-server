@@ -7,15 +7,21 @@ const jwt = require('jsonwebtoken');
 
 const Order = () => db().collection('orders');
 
-router.get('/create', async (req, res)=>{
+router.post('/create', async (req, res)=>{
     const order = {
         _id: uuid(),
-        user: req.body.id,
-        productID: req.body.productID,
+        user_id: req.body.user_id,
+        product_id: req.body.product_id,
         quantity: req.body.quantity,
+        dateCreated: new Date(),
+        dateModified: null
     }
     try{
-
+        const createOrder = await Order().insertOne(order);
+        res.json({
+            success: true,
+            result: createOrder
+        })
     }catch(errors){
         res.json({
             success: false,
