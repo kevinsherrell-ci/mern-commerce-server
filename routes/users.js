@@ -3,10 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
 
-const {db} = require('../mongo');
+const {db} = require('../Mongo');
 const {uuid} = require('uuidv4');
-const {validateUser} = require('../validation/user');
+const {validateUser} = require('../Validation/users');
 const jwt = require('jsonwebtoken');
+
+const User = () => db().collection('users');
+
+
 /* GET users listing. */
 router.get('/', function (req, res, next) {
     res.send('respond with a resource');
@@ -56,7 +60,7 @@ router.post('/register', async (req, res) => {
     //
     try {
 
-        const userFound = await db().collection('users').findOne({email: userObj.email});
+        const userFound = await User().findOne({email: userObj.email});
         if (userFound !== null) {
             return res.json({
                 success: false,
@@ -72,7 +76,7 @@ router.post('/register', async (req, res) => {
         //     throw new Error("error");
         // }
 
-        db().collection('users').insertOne(
+        User().insertOne(
             {
                 _id: uuid(),
                 email: userObj.email,
@@ -104,7 +108,7 @@ router.post('/login', async (req, res) => {
     const errors = [];
 
     const secretKey = process.env.JWT_SECRET_KEY;
-    const foundUser = await db().collection('users').findOne({email: req.body.email});
+    const foundUser = await User().findOne({email: req.body.email});
 
     if (foundUser === null) {
         errors.push({
