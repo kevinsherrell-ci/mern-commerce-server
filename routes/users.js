@@ -12,13 +12,18 @@ const User = () => db().collection('users');
 
 
 router.post('/reconnect', (req, res) => {
+    console.log(req.session);
     req.session.cookie.name = 'newCookie';
     if (req.session) {
-        res.json({
+        return res.json({
             success: true,
             result: req.session.currentUser
         });
     }
+    res.json({
+        success: false,
+        message: "no user is logged in"
+    });
 })
 router.get('/find', async (req, res) => {
     if (Object.keys(req.query).length === 0) {
@@ -124,18 +129,21 @@ router.post('/login', async (req, res) => {
 
     // const secretKey = process.env.JWT_SECRET_KEY;
     const foundUser = await User().findOne({email: req.body.email});
-
+    console.log(foundUser);
     if (foundUser === null) {
         errors.push({
             type: "user",
             message: "This email does not exist"
+        });
+        return res.json({
+            success: false,
+            message: "user does not exist"
         })
     }
 
     const userData = {
         id: foundUser._id,
         email: foundUser.email
-        // scope: foundUser.email.includes("codeimmersives.com") ? 'admin' : 'user'
     }
 
     // const payload = {
@@ -177,7 +185,7 @@ router.post('/login', async (req, res) => {
 
 })
 router.delete('/logout', (req, res) => {
-    console.log(req.session);
+    // console.log(req.session);
     req.session.destroy(() => {
         res.clearCookie('connect.sid', {
             path: '/',
