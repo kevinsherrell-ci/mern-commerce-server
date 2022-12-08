@@ -11,9 +11,17 @@ const jwt = require('jsonwebtoken');
 const User = () => db().collection('users');
 
 
-
-router.get('/find',  async (req, res) => {
-    if(Object.keys(req.query).length === 0){
+router.post('/reconnect', (req, res) => {
+    req.session.cookie.name = 'newCookie';
+    if (req.session) {
+        res.json({
+            success: true,
+            result: req.session.currentUser
+        });
+    }
+})
+router.get('/find', async (req, res) => {
+    if (Object.keys(req.query).length === 0) {
         return res.json({
             success: false,
             message: "must provide a query"
@@ -35,23 +43,23 @@ router.get('/find',  async (req, res) => {
         result: foundUser
     })
 })
-router.get('/verify', (req, res) => {
-    const token = req.header(process.env.TOKEN_HEADER_KEY);
-
-    const verified = jwt.verify(token, process.env.JWT_SECRET_KEY);
-
-    if (verified === null) {
-        res.json({
-            success: false,
-            message: 'ID token could not be verified'
-        })
-    }
-
-    res.json({
-        success: true,
-        message: "Token verified"
-    })
-})
+// router.get('/verify', (req, res) => {
+//     const token = req.header(process.env.TOKEN_HEADER_KEY);
+//
+//     const verified = jwt.verify(token, process.env.JWT_SECRET_KEY);
+//
+//     if (verified === null) {
+//         res.json({
+//             success: false,
+//             message: 'ID token could not be verified'
+//         })
+//     }
+//
+//     res.json({
+//         success: true,
+//         message: "Token verified"
+//     })
+// })
 /* POST create user*/
 router.post('/register', async (req, res) => {
     console.log("/register");
@@ -113,7 +121,7 @@ router.post('/login', async (req, res) => {
 
     const errors = [];
 
-    const secretKey = process.env.JWT_SECRET_KEY;
+    // const secretKey = process.env.JWT_SECRET_KEY;
     const foundUser = await User().findOne({email: req.body.email});
 
     if (foundUser === null) {
@@ -124,25 +132,30 @@ router.post('/login', async (req, res) => {
     }
 
     const userData = {
-        date: new Date(),
         id: foundUser._id,
+        email: foundUser.email
         // scope: foundUser.email.includes("codeimmersives.com") ? 'admin' : 'user'
     }
 
-    const payload = {
-        userData: userData,
-        exp: Math.floor(Date.now() / 1000) + (60 * 60)
-    };
+    // const payload = {
+    //     userData: userData,
+    //     exp: Math.floor(Date.now() / 1000) + (60 * 60)
+    // };
     try {
         bcrypt.compare(req.body.password, foundUser.password)
             .then(result => {
                 if (result === true) {
-                    const token = jwt.sign(payload, secretKey);
-                    return res.json({
-                        success: true,
-                        token: token,
-                        email: foundUser.email
-                    })
+                    // const token = jwt.sign(payload, secretKey);
+                    req.session.currentUser = userData;
+                    req.session.cookie.id = foundUser._id;
+                    // req.session.token = token;
+
+                    return res.json({success: true, result: userData});
+                    // return res.json({
+                    //     success: true,
+                    //     token: token,
+                    //     email: foundUser.email
+                    // })
                 } else {
                     errors.push({
                         type: 'user',
@@ -161,6 +174,17 @@ router.post('/login', async (req, res) => {
         })
     }
 
+})
+router.delete('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid', {
+            path: '/',
+            httpOnly: true
+        }).json({
+            success: true,
+            message: "user is logged out"
+        })
+    })
 })
 /* GET users listing. */
 router.get('/:id', async (req, res, next) => {
