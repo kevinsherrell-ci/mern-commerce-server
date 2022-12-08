@@ -27,7 +27,7 @@ const corsOptions = {
 }
 
 const store = MongoStore.create({
-    mongoUrl: process.env.MONGO_URI
+    mongoUrl: process.env.MONGO_URI +  process.env.MONGO_DATABASE
 })
 
 app.use(session({

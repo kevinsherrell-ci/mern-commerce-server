@@ -97,6 +97,7 @@ router.post('/register', async (req, res) => {
                 password: userObj.password
             }
         ).then(result => {
+
             res.json({
                 success: true,
                 result: result
@@ -176,6 +177,7 @@ router.post('/login', async (req, res) => {
 
 })
 router.delete('/logout', (req, res) => {
+    console.log(req.session);
     req.session.destroy(() => {
         res.clearCookie('connect.sid', {
             path: '/',
