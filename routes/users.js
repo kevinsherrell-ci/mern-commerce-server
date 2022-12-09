@@ -14,7 +14,7 @@ const User = () => db().collection('users');
 router.post('/reconnect', (req, res) => {
     console.log(req.session);
     req.session.cookie.name = 'newCookie';
-    if (req.session) {
+    if (req.session.currentUser) {
         return res.json({
             success: true,
             result: req.session.currentUser
