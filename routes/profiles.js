@@ -7,29 +7,31 @@ const jwt = require('jsonwebtoken');
 
 const Profile = () => db().collection('profiles');
 
-router.get('/:id', async (req, res)=>{
-    try{
+router.get('/:id', async (req, res) => {
+    try {
         const findProfile = await Profile().findOne({user_id: req.params.id});
-        if(findProfile === null){
-            return res.json({
+        if (findProfile === null) {
+            return res.status(400).json({
                 success: false,
-                message: "this profile does not exist"
+                error: [{
+                    type: "profile",
+                    message: "this profile does not exist"
+                }]
             })
         }
-        res.json({
+        res.status(200).json({
             success: true,
-            result: findProfile
+            data: findProfile
         })
-    }catch(errors){
-        res.json({
-            success:false,
-            errors: errors
+    } catch (errors) {
+        res.status(500).json({
+            success: false,
+            error: errors
         })
     }
 })
 
 router.post('/create', async (req, res) => {
-    console.log(req.body.user_id);
     const profile = {
         _id: uuid(),
         user_id: req.body.user_id,
@@ -57,15 +59,17 @@ router.post('/create', async (req, res) => {
         dateModified: null
     }
     try {
-        const profileCreated = await Profile().insertOne(profile);
-        res.json({
-            success: true,
-            result: profileCreated
+        Profile().insertOne(profile).then(response => {
+            return res.status(200).json({
+                success: true,
+                data: profile
+            })
         })
-    } catch (errors) {
-        res.json({
+
+    } catch (err) {
+        res.status(500).json({
             success: false,
-            errors: errors
+            error: err.message
         })
     }
 })
@@ -75,14 +79,14 @@ router.put('/update/:id', async (req, res) => {
     const errors = [];
     try {
         // temporary validation solution - move into separate module
-        if(Object.keys(req.body).length === 0){
-            return res.json({
-                success: true,
-                message: "body is empty, no changes have been made"
+        if (Object.keys(req.body).length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: "body is empty, no changes have been made"
             })
         }
-        Object.keys(req.body).forEach(key=>{
-            if(!keys.includes(key)){
+        Object.keys(req.body).forEach(key => {
+            if (!keys.includes(key)) {
                 errors.push({
                     type: "profile",
                     message: `"${key}" is an invalid key, please remove and try again`
@@ -90,24 +94,25 @@ router.put('/update/:id', async (req, res) => {
             }
         })
 
-        if(errors.length === 0){
-            const updateProfile = await Profile().updateOne({_id: req.params.id}, {$set: req.body}, {upsert: true});
-            return res.json({
-                success: true,
-                result: updateProfile
+
+        if (errors.length > 0) {
+            return res.status(500).json({
+                success: false,
+                error: errors
             })
         }
 
-        res.json({
-            success: false,
-            errors: errors
-        })
 
-
-    } catch (errors) {
-        res.json({
+        const updateProfile = await Profile().updateOne({_id: req.params.id}, {$set: req.body}, {upsert: true});
+        const profile = await Profile().findOne({_id: req.params.id});
+        return res.status(200).json({
             success: true,
-            errors: errors
+            data: profile
+        })
+    } catch (err) {
+        res.status(500).json({
+            success: true,
+            error: err.message
         })
     }
 })

@@ -12,88 +12,94 @@ const User = () => db().collection('users');
 
 
 router.post('/reconnect', (req, res) => {
-    console.log(req.session);
-    req.session.cookie.name = 'newCookie';
-    if (req.session.currentUser) {
-        return res.json({
-            success: true,
-            result: req.session.currentUser
-        });
-    }
-    res.json({
-        success: false,
-        message: "no user is logged in"
-    });
-})
-router.get('/find', async (req, res) => {
-    if (Object.keys(req.query).length === 0) {
-        return res.json({
-            success: false,
-            message: "must provide a query"
-        })
-    }
-    console.log(req.query);
+        console.log(req.session);
+        req.session.cookie.name = 'newCookie';
+        try {
+            if (req.session.currentUser === null || req.session.currentUser === undefined) {
+                return res.status(400).json({
+                    success: false,
+                    error: [{
+                        type: "auth",
+                        message: "Session not found"
+                    }]
+                })
+            }
+            return res.status(200).json({
+                success: true,
+                data: req.session.currentUser
+            });
 
-    //
-    const foundUser = await User().findOne({email: req.query.email});
-    console.log(foundUser);
-    if (foundUser === null) {
-        return res.json({
+
+        } catch (err) {
+            res.status(500).json({
+                success: false,
+                message: err.message
+            })
+        }
+
+    }
+)
+router.get('/find', async (req, res) => {
+    try {
+        if (Object.keys(req.query).length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: [{
+                    type: "auth",
+                    message: "must provide a query"
+                }]
+            })
+        }
+
+        const foundUser = await User().findOne({email: req.query.email});
+
+        if (foundUser === null) {
+            return res.status(400).json({
+                success: false,
+                message: "user does not exist"
+            })
+        }
+        res.status(200).json({
+            success: true,
+            data: foundUser
+        })
+    } catch (err) {
+        res.status(500).json({
             success: false,
-            message: "user does not exist"
+            error: err.message
         })
     }
-    res.json({
-        success: true,
-        result: foundUser
-    })
+
 })
-// router.get('/verify', (req, res) => {
-//     const token = req.header(process.env.TOKEN_HEADER_KEY);
-//
-//     const verified = jwt.verify(token, process.env.JWT_SECRET_KEY);
-//
-//     if (verified === null) {
-//         res.json({
-//             success: false,
-//             message: 'ID token could not be verified'
-//         })
-//     }
-//
-//     res.json({
-//         success: true,
-//         message: "Token verified"
-//     })
-// })
+
 /* POST create user*/
 router.post('/register', async (req, res) => {
-    console.log("/register");
     let hashed;
     const userObj = {
         email: req.body.email,
         password: req.body.password,
         verify: req.body.verify
     }
-    console.log("user object", userObj);
     const validated = validateUser(userObj);
-    //
     try {
 
         const userFound = await User().findOne({email: userObj.email});
         if (userFound !== null) {
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message: 'Email already exists, please try another email'
             })
         }
-
-        if (validated.isValid) {
-            hashed = await bcrypt.hash(userObj.password, saltRounds);
-            userObj.password = hashed;
+        if (!validated.isValid) {
+            return res.status(500).json({
+                success: false,
+                error: validated.errors
+            })
         }
-        // else {
-        //     throw new Error("error");
-        // }
+
+        hashed = await bcrypt.hash(userObj.password, saltRounds);
+        userObj.password = hashed;
+
 
         User().insertOne(
             {
@@ -101,20 +107,19 @@ router.post('/register', async (req, res) => {
                 email: userObj.email,
                 password: userObj.password
             }
-        ).then(result => {
-
-            res.json({
+        ).then(async result => {
+            const newUser = await User().findOne({_id: result.insertedId});
+            console.log(newUser);
+            res.status(200).json({
                 success: true,
-                result: result
+                data: newUser
             })
         })
 
-    } catch (error) {
-        console.log(error);
-        res.json({
+    } catch (err) {
+        res.status(500).json({
             success: false,
-            isValid: validated.isValid,
-            errors: validated.errors
+            error: err.message
         })
     }
 
@@ -123,21 +128,17 @@ router.post('/register', async (req, res) => {
 
 /* POST login user*/
 router.post('/login', async (req, res) => {
-    console.log("/login");
-
     const errors = [];
 
-    // const secretKey = process.env.JWT_SECRET_KEY;
     const foundUser = await User().findOne({email: req.body.email});
-    console.log(foundUser);
     if (foundUser === null) {
         errors.push({
             type: "user",
-            message: "This email does not exist"
-        });
-        return res.json({
-            success: false,
             message: "user does not exist"
+        });
+        return res.status(400).json({
+            success: false,
+            error: errors
         })
     }
 
@@ -146,46 +147,35 @@ router.post('/login', async (req, res) => {
         email: foundUser.email
     }
 
-    // const payload = {
-    //     userData: userData,
-    //     exp: Math.floor(Date.now() / 1000) + (60 * 60)
-    // };
     try {
         bcrypt.compare(req.body.password, foundUser.password)
             .then(result => {
                 if (result === true) {
-                    // const token = jwt.sign(payload, secretKey);
                     req.session.currentUser = userData;
                     req.session.cookie.id = foundUser._id;
-                    // req.session.token = token;
 
-                    return res.json({success: true, result: userData});
-                    // return res.json({
-                    //     success: true,
-                    //     token: token,
-                    //     email: foundUser.email
-                    // })
+                    return res.status(200).json({success: true, data: userData});
+
                 } else {
                     errors.push({
                         type: 'user',
                         message: "email or password invalid"
                     })
-                    return res.json({
+                    return res.status(500).json({
                         success: false,
-                        errors: errors
+                        error: errors
                     })
                 }
             })
     } catch (err) {
-        res.send({
+        res.status(500).json({
             success: false,
-            message: err
+            error: err
         })
     }
 
 })
 router.delete('/logout', (req, res) => {
-    // console.log(req.session);
     req.session.destroy(() => {
         res.clearCookie('connect.sid', {
             path: '/',
@@ -198,15 +188,17 @@ router.delete('/logout', (req, res) => {
 })
 /* GET users listing. */
 router.get('/:id', async (req, res, next) => {
-    console.log("id router is running")
     const foundUser = await User().findOne({_id: req.params.id});
     if (foundUser === null) {
-        return res.json({
+        return res.status(400).json({
             success: false,
-            message: "user does not exist"
+            error: [{
+                type: "auth",
+                message: "user does not exist"
+            }]
         })
     }
-    res.json({
+    res.status(200).json({
         success: true,
         result: {
             _id: foundUser._id,
