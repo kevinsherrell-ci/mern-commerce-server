@@ -104,6 +104,7 @@ router.put('/update/:id', async (req, res) => {
 
 
         const updateProfile = await Profile().updateOne({_id: req.params.id}, {$set: req.body}, {upsert: true});
+        console.log(updateProfile);
         const profile = await Profile().findOne({_id: req.params.id});
         return res.status(200).json({
             success: true,
