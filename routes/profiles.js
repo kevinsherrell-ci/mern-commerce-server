@@ -4,6 +4,7 @@ const router = express.Router();
 const {db} = require('../Mongo');
 const {uuid} = require('uuidv4');
 const jwt = require('jsonwebtoken');
+const {response} = require("express");
 
 const Profile = () => db().collection('profiles');
 
@@ -52,7 +53,7 @@ router.post('/create', async (req, res) => {
             state: "",
             zip: ""
         },
-        cart: {},
+        cart: [],
         favorites: [],
         active: false,
         dateCreated: new Date(),
@@ -74,9 +75,10 @@ router.post('/create', async (req, res) => {
     }
 })
 
+
 router.put('/update/:id', async (req, res) => {
     const keys = ['_id', 'user_id', 'firstName', 'middleName', 'lastName', 'shippingAddress', 'billingAddress', 'cart', 'favorites', 'active', 'dateCreated', 'dateModified'];
-    const cartKeys = ['id', 'brand', 'name', 'price', 'price_sign', 'currency', 'image_link', 'product_link', 'website_link', 'description', 'rating', 'category', 'product_type','tag_list', 'create_at', 'updated_at', 'product_api_url', 'api_featured_image', 'product_colors', 'qty'];
+    const cartKeys = ['id', 'brand', 'name', 'price', 'price_sign', 'currency', 'image_link', 'product_link', 'website_link', 'description', 'rating', 'category', 'product_type', 'tag_list', 'create_at', 'updated_at', 'product_api_url', 'api_featured_image', 'product_colors', 'qty'];
     const errors = [];
     try {
         // temporary validation solution - move into separate module
@@ -118,7 +120,7 @@ router.put('/update/:id', async (req, res) => {
         }
 
 
-        const updateProfile = await Profile().updateOne({_id: req.params.id}, {$set: {...req.body}}, {upsert: false});
+        const updateProfile = await Profile().updateOne({_id: req.params.id}, {$set: req.body}, {upsert: false});
         console.log(updateProfile);
         const profile = await Profile().findOne({_id: req.params.id});
         return res.status(200).json({
@@ -131,6 +133,34 @@ router.put('/update/:id', async (req, res) => {
             error: err.message
         })
     }
+})
+
+router.put('/update/:id/cart/remove',  (req, res) => {
+    try {
+
+         Profile().findOneAndUpdate({_id: req.params.id}, {$pull: {cart: {id: req.body.id}}}, { returnDocument: "after"}).then(response=>{
+             res.json({
+                 success: true,
+                 data: response.value
+             })
+         })
+             .catch(err=>{
+                 res.json({
+                     success: false,
+                     error: err.message
+                 })
+             })
+
+
+
+
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: err.message
+        })
+    }
+
 })
 
 module.exports = router;
