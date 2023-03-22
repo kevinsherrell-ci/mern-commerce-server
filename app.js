@@ -19,7 +19,7 @@ mongoConnect();
 const app = express();
 
 const corsOptions = {
-    origin: 'http://localhost:3000',
+    origin: `http://localhost:${process.env.REACT_PORT}`,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
     credentials: true,
@@ -54,10 +54,10 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users',  usersRouter);
-app.use('/profiles', profileRouter);
-app.use('/orders', orderRouter);
-app.use('/products', productRouter);
+app.use('/api/users',  usersRouter);
+app.use('/api/profiles', profileRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/products', productRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
     next(createError(404));
