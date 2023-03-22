@@ -19,7 +19,8 @@ mongoConnect();
 const app = express();
 
 const corsOptions = {
-    origin: `http://localhost:${process.env.REACT_PORT}`,
+    // origin: `http://localhost:${process.env.REACT_PORT}`,
+    origin: process.env.CORS_ORIGIN,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
     credentials: true,
